@@ -86,7 +86,8 @@ $dbObject->groupBy('col1')->having('COUNT(col1)', '>', 10)->get('tableDb', 'COUN
 <?php
 $dbObject->orderBy('col1', 'asc')->get('tableDb');
 // SELECT * FROM tableDb ORDER BY col1 ASC
-?>```
+?>
+```
 
 ### Limit
 ```php
