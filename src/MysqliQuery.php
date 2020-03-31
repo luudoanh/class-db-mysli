@@ -293,14 +293,14 @@ class MysqliQuery
 	/** Gộp nhanh một bảng nữa với toán tử logic AND */
 	public function addAndToJoin($joinColumns, $operator, $joinValues, $more = 'AND')
 	{
-		$this->_addAndToJoin[] = [$joinColumns, $joinValues, $operator, $more];
+		$this->_addAndToJoin[] = [$joinColumns, $operator, $joinValues, $more];
 		return $this;
 	}
 
 	/** Gộp nhanh một bảng nữa với toán tử logic OR */
 	public function addOrToJoin($joinColumns, $operator, $joinValues, $more = 'OR')
 	{
-		$this->addAndToJoin($joinColumns, $joinValues, $operator, $more);
+		$this->addAndToJoin($joinColumns, $operator, $joinValues, $more);
 		return $this;
 	}
 
@@ -384,7 +384,11 @@ class MysqliQuery
 	 */
 	public function get($tableName, $columns = null, $numberRows = null)
 	{
-		$this->_tableName = self::$_prefix.$tableName;
+		if (is_object($tableName)) {
+			$this->_tableName = $this->_buildSubQuery($tableName);
+		} else {
+			$this->_tableName = self::$_prefix.$tableName;
+		}
 		if ($columns) {
 			if (is_array($columns)) {
 				$columns = implode(', ', $columns);
@@ -458,10 +462,10 @@ class MysqliQuery
 			list($whereColumns, $operator, $whereValues, $more) = $value;
 			$this->_query .= ($more ? ' '.$more.' ' : ' ').$whereColumns;
 			$operator = strtoupper($operator);
+			$this->_query .= ' '.$operator. ' ';
 			switch (strtolower(trim($operator))) {
 				case 'not in':
 				case 'in':
-				$this->_query .= ' '.$operator. ' ';
 				if (is_object($whereValues)) {
 					$data = $this->_buildSubQuery($whereValues);
 				} else {
@@ -471,18 +475,21 @@ class MysqliQuery
 				break;
 				case 'not between':
 				case 'between':
-				$this->_query .= ' '.$operator.' '.$whereValues[0].' AND '.$whereValues[1];
+				$this->_query .= $whereValues[0].' AND '.$whereValues[1];
 				break;
 				case 'not exists':
 				case 'exists':
-				$this->_query .= ' '.$operator. ' ';
 				$this->_query .= $this->_buildSubQuery($whereValues);
 				break;
 				default:
 				if ($whereValues === null) {
-					$this->_query .= ' '.$operator.' NULL';
+					$this->_query .= 'NULL';
+				} elseif (is_numeric($whereValues)) {
+					$this->_query .= $whereValues;
+				} elseif (is_object($whereValues)) {
+					$this->_query .= $this->_buildSubQuery($whereValues);
 				} else {
-					$this->_query .= ' '.$operator.' '.$whereValues;
+					$this->_query .= "'".$whereValues."'";
 				}
 				break;
 			}
@@ -583,7 +590,7 @@ class MysqliQuery
 		}
 		if (!empty($this->_addAndToJoin)) {
 			foreach ($this->_addAndToJoin as $key => $value) {
-				list($joinColumns, $joinValues, $operator, $more) = $value;
+				list($joinColumns, $operator, $joinValues, $more) = $value;
 				$this->_query .= ' '.$more.' '.$joinColumns.' '.$operator.' '.$joinValues;
 			}
 		}

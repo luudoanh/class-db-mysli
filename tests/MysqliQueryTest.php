@@ -41,6 +41,9 @@ class MysqliQueryTest extends TestCase
 		$this->dbObject->where('col1', '=', 10)->orWhere('col1', '=', 2)->get('tableDb', '', 10);
 		$this->assertEquals('SELECT * FROM tableDb WHERE col1 = 10 OR col1 = 2 LIMIT 10', $this->dbObject->getLastQuery());
 
+		$this->dbObject->where('col1', 'like', '%some_thing%')->get('tableDb', 'col1, col2', 10);
+		$this->assertEquals('SELECT col1, col2 FROM tableDb WHERE col1 LIKE \'%some_thing%\' LIMIT 10', $this->dbObject->getLastQuery());
+
 		//	Test having vs group by
 		$this->dbObject->having('COUNT(col1)', '>', 5)->groupBy(['col1', 'col2'])->get('tableDb', ['COUNT(col1)', 'col2']);
 		$this->assertEquals('SELECT COUNT(col1), col2 FROM tableDb GROUP BY col1, col2 HAVING COUNT(col1) > 5', $this->dbObject->getLastQuery());
@@ -71,13 +74,18 @@ class MysqliQueryTest extends TestCase
 		//	Test subquery
 		$subQuery = $this->dbObject->subQuery();
 		$subQuery->setFields('col1')->where('col1', '>', 2)->get('subTable');
-		$this->dbObject->where('col1', 'NOT EXISTS', $subQuery)->get('tableDb', 'col1');
-		$this->assertEquals('SELECT col1 FROM tableDb WHERE col1 NOT EXISTS (SELECT col1 FROM subTable WHERE col1 > 2)', $this->dbObject->getLastQuery());
+		$this->dbObject->where('col1', 'NOT EXISTS', $subQuery)->get('tableDb', 'col1', 1);
+		$this->assertEquals('SELECT col1 FROM tableDb WHERE col1 NOT EXISTS (SELECT col1 FROM subTable WHERE col1 > 2) LIMIT 1', $this->dbObject->getLastQuery());
+
+		$subQuery = $this->dbObject->subQuery();
+		$subQuery->where('col1', '=', 1)->get('subTable', 'col1', 1);
+		$this->dbObject->where('col1', '=', $subQuery)->get('tableDb', 'col1, col2', 1);
+		$this->assertEquals('SELECT col1, col2 FROM tableDb WHERE col1 = (SELECT col1 FROM subTable WHERE col1 = 1 LIMIT 1) LIMIT 1', $this->dbObject->getLastQuery());
 
 		$subQuery = $this->dbObject->subQuery('b');
 		$subQuery->where('col1', '>', 2)->get('subTable', 'col1');
-		$this->dbObject->where('col1', 'IN', $subQuery)->get('tableDb', 'col1');
-		$this->assertEquals('SELECT col1 FROM tableDb WHERE col1 IN (SELECT col1 FROM subTable WHERE col1 > 2) AS b', $this->dbObject->getLastQuery());
+		$this->dbObject->where('col1', 'IN', ['1', '2', '3'])->get($subQuery, 'col1');
+		$this->assertEquals('SELECT col1 FROM (SELECT col1 FROM subTable WHERE col1 > 2) AS b WHERE col1 IN (1,2,3)', $this->dbObject->getLastQuery());
 
 		$this->dbObject->setQueryOption('sql_no_cache');
 		$this->dbObject->get('tableDb', ['col1', 'col2'], 10);
