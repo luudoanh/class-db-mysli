@@ -11,7 +11,9 @@ include_once 'MysqliQuery.php';
 ```
 ### Installation with composer
 Nếu bạn sử dụng composer thì có thể chạy lệnh để clone project này về
-```composer require luudoanh/class-db-mysqli```
+```
+composer require luudoanh/class-db-mysqli
+```
 # Initialization
 Khởi tạo class cơ bản bằng cách
 ```php
@@ -36,12 +38,16 @@ use App\Mysql;
 $dbObject = new MysqliQuery('hostname', 'dbUser', 'password', 'dbName', 'port', 'charset', 'prefix');
 $dbObject->get('tableDb');
 // SELECT * FROM tableDb
+
 $dbObject->getOne('tableDb');
 // SELECT * FROM tableDb LIMIT 1
+
 $dbObject->get('tableDb', ['col1', 'col2'], 10);
 // SELECT col1, col2 FROM tableDb LIMIT 10
+
 $dbObject->setPrefix('db_')->get('tableDb');
 // SELECT * FROM db_tableDb
+
 $dbObject->setFields(['col1', 'col2'])->get('tableDb');
 // SELECT col1, col2 FROM tableDb
 ?>
@@ -52,12 +58,16 @@ $dbObject->setFields(['col1', 'col2'])->get('tableDb');
 <?php
 $dbOject->where('col1', '>', 2)->get('tableDb');
 // SELECT * FROM tableDb WHERE col1 > 2
+
 $dbObject->where('col1', 'like', '%some_thing%')->get('tableDb');
 // SELECT * FROM tableDb WHERE col1 LIKE '%some_thing%'
+
 $dbObject->where('col1', 'between', [10, 100])->get('tableDb');
 // SELECT * FROM tableDb WHERE col1 BETWEEN 10 AND 100
+
 $dbObject->where('col1', 'in', [1,2,3,4])->get('tableDb');
 // SELECT * FROM tableDb WHERE col1 IN (1,2,3,4)
+
 $dbObject->where('col1', '>', 2)->orWhere('col2', '=', 3)->get('tableDb');
 // SELECT * FROM tableDb WHERE col1 > 2 OR col2 = 3
 ?>
@@ -68,6 +78,7 @@ $dbObject->where('col1', '>', 2)->orWhere('col2', '=', 3)->get('tableDb');
 <?php
 $dbObject->groupBy('col1')->get('tableDb');
 // SELECT * FROM tableDb GROUP BY col1
+
 $dbObject->groupBy(['col1', 'col2'])->get('tableDb');
 // SELECT * FROM tableDb GROUP BY col1, col2
 ?>
@@ -94,6 +105,7 @@ $dbObject->orderBy('col1', 'asc')->get('tableDb');
 <?php
 $dbObject->limit(10)->get('tableDb', 'col1');
 // SELECT col1 FROM tableDb LIMIT 10
+
 $dbObject->limit(10, 100)->get('tableDb', 'col1');
 // SELECT col1 FROM tableDb LIMIT 10, 100
 ?>
@@ -105,6 +117,7 @@ $dbObject->limit(10, 100)->get('tableDb', 'col1');
 $dbObject->join('tableJoin', 'tableJoin.col1 = tableDb.col2', 'left')->get('tableDb', ['tableDb.col2', 'tableJoin.col1', 'tableJoin.col2'], 10);
 // SELECT tableDb.col2, tableJoin.col1, tableJoin.col2 FROM tableDb LEFT JOIN tableJoin ON tableDb.col2 = tableJoin.col1 LIMIT 10
 // Kiểu join trong tham số thứ 3 của function join() bạn có thể dử dụng INNER, LEFT, LEFT OUTER, RIGHT, RIGHT OUTER
+
 $dbObject->join('tableJoin j', 'j.col1 = t.col1', 'right outer')->get('tableDb t', ['t.col1', 'j.col1', 't.col2', 'j.col2'], 10);
 // SELECT t.col1, j.col1, t.col2, j.col2 FROM tableDb t RIGHT OUTER JOIN tableJoin ON j.col1 = t.col2 LIMIT 10
 $dbObject->join('tableJoin j', 'j.col1 = t.col1', 'right outer')->addAndToJoin('j.col2', '>', 3)->get('tableDb t', ['t.col1', 'j.col1', 't.col2', 'j.col2'], 10);
@@ -129,10 +142,12 @@ $subQuery = $dbObject->subQuery();
 $subQuery->where('col1', '=', 2)->get('subTable', 'col2');
 $dbObject->where('col1', 'in', $subQuery)->get('tableDb', 'col1, col2', 1);
 // SELECT col1, col2 FROM tableDb WHERE col1 IN (SELECT col2 FROM subTable WHERE col1 = 2) LIMIT 1
+
 $subQuery = $dbObject->subQuery();
 $subQuery->where('col1', '=', 1)->get('subTable', 'col1', 1);
 $dbObject->where('col1', '=', $subQuery)->get('tableDb', 'col1, col2', 1);
 // SELECT col1, col2 FROM tableDb WHERE col1 = (SELECT col1 FROM subTable WHERE col1 = 1 LIMIT 1) LIMIT 1
+
 $subQuery = $dbObject->subQuery('sub');
 $subQuery->where('col1', '=', 2)->get('subTable', 'col2');
 $dbObject->get($subQuery, 'col1, col2', 1);
