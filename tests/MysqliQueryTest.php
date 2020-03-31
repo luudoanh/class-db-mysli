@@ -86,7 +86,7 @@ class MysqliQueryTest extends TestCase
 		$subQuery->where('col1', '>', 2)->get('subTable', 'col1');
 		$this->dbObject->where('col1', 'IN', ['1', '2', '3'])->get($subQuery, 'col1');
 		$this->assertEquals('SELECT col1 FROM (SELECT col1 FROM subTable WHERE col1 > 2) AS b WHERE col1 IN (1,2,3)', $this->dbObject->getLastQuery());
-
+		
 		$this->dbObject->setQueryOption('sql_no_cache');
 		$this->dbObject->get('tableDb', ['col1', 'col2'], 10);
 		$this->assertEquals('SQL_NO_CACHE', $this->dbObject->getLastQueryOption());
