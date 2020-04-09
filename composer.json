@@ -1,5 +1,5 @@
 {
-    "name": "luudoanh/MysqliQuery",
+    "name": "luudoanh/mysqli-query",
     "description": "A class for builder query",
     "keywords": [
         "Mysqli query builder",
