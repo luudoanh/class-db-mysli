@@ -28,7 +28,7 @@ class MysqliQuery
 	 * 	Table prefix
 	 * @var string
 	 */
-	protected static $_prefix = '';
+	protected static $_prefix;
 
 	/**
 	 * 	Setting for debug
@@ -40,7 +40,7 @@ class MysqliQuery
 	 * Sql query statement
 	 */
 	private $_query = '';
-	
+
 	/**
 	 * Table query
 	 */
@@ -54,7 +54,7 @@ class MysqliQuery
 	 * Optional Query
 	 * @var string
 	 */
-	
+
 	private $_queryOption = '';
 	private $_lockInShareMode = '';
 	private $_forUpdate = '';
@@ -72,7 +72,7 @@ class MysqliQuery
 	private $_limit = [];
 	private $_join = [];
 	private $_addAndToJoin = [];
-	private $_union = [];
+	private $_merge = [];
 	private $_insertValues = [];
 
 
@@ -221,7 +221,7 @@ class MysqliQuery
 	 * @param  string $operator      phép tử so sánh
 	 * @param  string $havingValues  giá trị so sánh
 	 * @param  string $more          thêm các toán tử logic mặc định là and
-	 * @return Mysqli object         
+	 * @return Mysqli object
 	 */
 	public function having($havingColumns, $operator, $havingValues, $more = 'AND')
 	{
@@ -269,7 +269,7 @@ class MysqliQuery
 		} else {
 			$this->_limit = [$firstLimit];
 		}
-		return $this; 
+		return $this;
 	}
 
 	/**
@@ -284,7 +284,7 @@ class MysqliQuery
 		$joinType = strtoupper($joinType);
 		$joinAllowed = ['INNER', 'LEFT', 'LEFT OUTER', 'RIGHT', 'RIGHT OUTER'];
 		if (!in_array($joinType, $joinAllowed)) {
-			throw new Exception("Join type doesn't match: ".implode(', ', $joinAllowed));	
+			throw new Exception("Join type doesn't match: ".implode(', ', $joinAllowed));
 		}
 		$joinTable = self::$_prefix.$joinTable;
 		$this->_join[] = [$joinTable, $joinOperator, $joinType];
@@ -307,17 +307,17 @@ class MysqliQuery
 
 	/**
 	 * Gộp thêm một câu truy vấn nữa để kết quả được trả về cùng nhau
-	 * @param  object|string  $unionQuery đối tượng chứa câu lệnh query trước đó
+	 * @param  object|string  $mergeQuery đối tượng chứa câu lệnh query trước đó
 	 * hoặc một câu query hoàn chỉnh
-	 * @param  boolean $isUnionAll true and false với UNION ALL hoặc chỉ UNION
+	 * @param  string $type sử dụng 'UNION ALL' hoặc 'UNION' hoặc 'INTERSECT'
 	 * @return Mysqli object
 	 */
-	public function union($unionQuery, $isUnionAll = false)
+	public function merge($mergeQuery, $type = 'UNION')
 	{
-		if ($unionQuery instanceof MysqliQuery) {
-			$this->_union[] = [$unionQuery->getLastQuery(), $isUnionAll];
+		if ($mergeQuery instanceof MysqliQuery) {
+			$this->_merge[] = [$mergeQuery->getLastQuery(), $type];
 		} else {
-			$this->_union[] = [$unionQuery, $isUnionAll];
+			$this->_merge[] = [$mergeQuery, $type];
 		}
 		return $this;
 	}
@@ -328,9 +328,9 @@ class MysqliQuery
 	 */
 	public function setQueryOption(string $queryOption = null)
 	{
-		$optionAllowed = ['ALL', 'DISTINCT', 'DISTINCTROW', 'HIGH_PRIORITY', 'STRAIGHT_JOIN', 'SQL_SMALL_RESULT', 'SQL_BIG_RESULT', 'SQL_BUFFER_RESULT', 'SQL_CACHE', 'SQL_NO_CACHE', 'SQL_CALC_FOUND_ROWS', 'LOW_PRIORITY', 'DELAYED', 'IGNORE'];
+		$optionAllowed = ['ALL', 'DISTINCT', 'DISTINCTROW', 'HIGH_PRIORITY', 'STRAIGHT_JOIN', 'SQL_SMALL_RESULT', 'SQL_BIG_RESULT', 'SQL_BUFFER_RESULT', 'SQL_CACHE', 'SQL_NO_CACHE', 'SQL_CALC_FOUND_ROWS', 'LOW_PRIORITY', 'DELAYED', 'IGNORE', 'QUICK'];
 		if (!in_array(strtoupper($queryOption), $optionAllowed)) {
-			throw new Exception("Query option doesn't match: ".implode(', ', $optionAllowed));	
+			throw new Exception("Query option doesn't match: ".implode(', ', $optionAllowed));
 		}
 		$this->_queryOption = strtoupper($queryOption);
 		return $this;
@@ -440,15 +440,26 @@ class MysqliQuery
 		return new self(array('_subQueryAlias' => $_subQueryAlias, '_isSubQuery' => true));
 	}
 
-	public function insertValues(array $values)
+
+	/**
+	 * @param  array $values truyền vào một mảng thuần tự các giá trị mà bạn muốn insert
+	 * @return Mysqli object
+	 */
+	public function setInsertValues(array $values)
 	{
 		$this->_insertValues[] = $values;
 		return $this;
 	}
 
+	/**
+	 * @param  [string|object] $tableName Tên table
+	 * @param  [array] $columns Danh sách các trường muốn thêm dữ liệu
+	 * @param  [array] $values mảng các trường dữ liệu bạn muốn insert.
+	 * @return [object] Mysqli object
+	 */
 	public function insert($tableName, $columns = null, $values = null)
 	{
-		$this->_tableName = is_object($tableNamee) ? $this->_buildSubQuery($tableName) : self::$_prefix.$tableName;
+		$this->_tableName = is_object($tableName) ? $this->_buildSubQuery($tableName) : self::$_prefix.$tableName;
 
 		if ($columns) {
 			$columns = is_array($columns) ? '('.implode(', ', $columns).')' : rtrim($columns, ',');
@@ -462,9 +473,57 @@ class MysqliQuery
 		} else {
 			$newData = $this->_buildValues($this->_insertValues);
 		}
-		
+
 		$this->_query = 'INSERT '.($this->_queryOption ? $this->_queryOption : '').' INTO '.$this->_tableName.$columns.' '.(is_object($values) ? $newData : 'VALUES'.$newData);
 
+		$this->_buildQuery();
+		$this->reset();
+		return $this;
+	}
+
+
+	/**
+	 * @param  $tableName Tên bảng
+	 * @return Mysqli object
+	 */
+	public function delete($tableName)
+	{
+		$this->_tableName = is_object($tableName) ? $this->_buildSubQuery($tableName) : self::$_prefix.$tableName;
+
+		$this->_query = 'DELETE '.($this->_queryOption ? $this->_queryOption : '').' FROM '.$this->_tableName;
+		$this->_buildQuery();
+		$this->reset();
+		return $this;
+	}
+
+	/**
+	 * @param  [string, array, object] Tên bảng
+	 * @param  array Một mảng kết hợp chứ các trường và giá trị
+	 * @return [object] Mysqli object
+	 */
+	public function update($tableName, array $parameters)
+	{
+		$tmpTable = $tmpValues = null;
+		switch (gettype($tableName)) {
+			case 'array':
+				foreach ($tableName as $key => $value) {
+					$tmpTable .= self::$_prefix.$value.',';
+					unset($tableName[$key]);
+				}
+				$this->_tableName = rtrim($tmpTable, ',');
+				break;
+			case 'object':
+				$this->_tableName = $this->_buildSubQuery($tableName);
+				break;
+			case 'string':
+				$this->_tableName = self::$_prefix.$tableName;
+				break;
+		}
+		foreach ($parameters as $column => $expression) {
+			$tmpValues .= is_object($expression) ? $column.' = '.$this->_buildSubQuery($expression) : $column.' = '.$expression.',';
+		}
+		$rawValues = rtrim($tmpValues, ',');
+		$this->_query = 'UPDATE '.($this->_queryOption ? $this->_queryOption : '').' '.$this->_tableName.' SET '.$rawValues;
 		$this->_buildQuery();
 		$this->reset();
 		return $this;
@@ -506,10 +565,10 @@ class MysqliQuery
 				default:
 				if ($whereValues === null) {
 					$this->_query .= 'NULL';
-				} elseif (is_numeric($whereValues)) {
-					$this->_query .= $whereValues;
 				} elseif (is_object($whereValues)) {
 					$this->_query .= $this->_buildSubQuery($whereValues);
+				} elseif (is_numeric($whereValues) || preg_match('/\`/', $whereValues)) {
+					$this->_query .= $whereValues;
 				} else {
 					$this->_query .= "'".$whereValues."'";
 				}
@@ -581,7 +640,7 @@ class MysqliQuery
 			}
 		}
 	}
-	
+
 	/** Xây dựng mệnh đề order by */
 	private function _buildOrderBy()
 	{
@@ -607,7 +666,7 @@ class MysqliQuery
 		} else {
 			$this->_query .= $this->_limit;
 		}
-		
+
 	}
 
 	/** Xây dựng câu lệnh join */
@@ -628,15 +687,15 @@ class MysqliQuery
 		}
 	}
 
-	/** Xây dựng câu lệnh union */
-	private function _buildUnion()
+	/** Xây dựng câu lệnh union và intersect */
+	private function _buildMerge()
 	{
-		if (empty($this->_union)) {
+		if (empty($this->_merge)) {
 			return false;
 		}
-		foreach ($this->_union as $key => $value) {
-			list($unionQuery, $isUnionAll) = $value;
-			$this->_query .= ' UNION '.($isUnionAll ? 'ALL ' : '').$unionQuery;
+		foreach ($this->_merge as $key => $value) {
+			list($mergeQuery, $type) = $value;
+			$this->_query .= ' '.strtoupper($type).' '.$mergeQuery;
 		}
 		return $this;
 	}
@@ -688,7 +747,12 @@ class MysqliQuery
 				if (is_array($val)) {
 					$data .= call_user_func(array($this, __FUNCTION__), $val).',';
 				} else {
-					$data .= (is_numeric($val) ? $val : "'".$val."'").',';
+					if (is_numeric($val) || preg_match('/`/', $val)) {
+						$data .= $val.',';
+					} else {
+						$data .= "'".$val."',";
+					}
+					
 				}
 			}
 			$data = rtrim($data, ',');
@@ -715,7 +779,7 @@ class MysqliQuery
 		$this->_buildOrderBy();
 		$this->_buildLimit();
 		$this->_buildProcedure();
-		$this->_buildUnion();
+		$this->_buildMerge();
 		if ($this->_lockInShareMode) {
 			$this->_query .= ' LOCK IN SHARE MODE ';
 		} elseif ($this->_forUpdate) {
@@ -738,11 +802,10 @@ class MysqliQuery
 		$this->_limit = [];
 		$this->_join = [];
 		$this->_addAndToJoin = [];
-		$this->_union = [];
+		$this->_merge = [];
 		$this->_queryOption = '';
 		$this->_lockInShareMode = '';
 		$this->_forUpdate = '';
-		$this->_union = [];
 		$this->_into = [];
 		$this->_procedure = '';
 		$this->_tableName = '';
@@ -757,7 +820,7 @@ class MysqliQuery
 	{
 		return $this->lastQuery;
 	}
-	
+
 	/** Lấy ra tùy chọn cuối cùng được sử dụng */
 	public function getLastQueryOption()
 	{
@@ -775,9 +838,7 @@ class MysqliQuery
 		$this->_connection->close();
 		unset($this->_connection);
 	}
-	
 }
-
 
 
 //END CLASS

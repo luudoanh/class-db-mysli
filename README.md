@@ -129,9 +129,17 @@ $dbObject->join('tableJoin j', 'j.col1 = t.col1', 'right outer')->addAndToJoin('
 ### Union
 ```php
 <?php
-$dbObject->union($dbObject->get('tableDb2', 'col1', 1), 1)->where('col1', '=', 1)->get('tableDb1', 'col1, col2', 1);
+$dbObject->merge($dbObject->get('tableDb2', 'col1', 1), 'UNION')->where('col1', '=', 1)->get('tableDb1', 'col1, col2', 1);
 // SELECT col1, col2 FROM tableDb1 WHERE col1 = 1 LIMIT 1 UNION ALL SELECT col1 FROM tableDb2 LIMIT 1
 // Tham số thứ 2 trong hàm union() nếu là true sẽ là UNION ALL
+?>
+```
+
+### Intersect
+```php
+<?php
+$this->dbObject->merge($this->dbObject->setFields(['col1', 'col2'])->where('col1', '=', 2)->get('unionTable'), 'INTERSECT')->where('col1', '>', 3)->get('tableDb', 'col1, col2', 10);
+//SELECT col1, col2 FROM tableDb WHERE col1 > 3 LIMIT 10 INTERSECT SELECT col1, col2 FROM unionTable WHERE col1 = 2
 ?>
 ```
 
@@ -175,6 +183,32 @@ $subQuery = $this->dbObject->subQuery();
 $subQuery->get('subTable', ['firstName', 'lastName'], 10);
 $this->dbObject->insert('tableDb', ['firstName', 'lastName'], $subQuery);
 // INSERT  INTO tableDb(firstName, lastName) SELECT firstName, lastName FROM subTable LIMIT 10
-
-
 ?>
+```
+
+### Delete
+```php
+<?php
+$this->dbObject->where('id', '>', 10)->delete('tableDb');
+// DELETE  FROM tableDb WHERE id > 10
+?>
+```
+
+### Update
+```php
+<?php
+$this->dbObject->setPrefix('db_')->where('col1', '>', 9)->update('tableDb', ['col1' => 10, 'col2' => 12, 'col3' => 14]);
+// UPDATE  db_tableDb SET col1 = 10,col2 = 12,col3 = 14 WHERE col1 > 9
+
+$this->dbObject->setPrefix()->where('tableDb1.col1', '>', 10)->update(['tableDb1', 'tableDb2'], ['tableDb1.col1' => 'tableDb2.col1']);
+// UPDATE  tableDb1,tableDb2 SET tableDb1.col1 = tableDb2.col1 WHERE tableDb1.col1 > 10
+
+// Nếu muốn truyền một column vào mạnh đề where hãy thêm vào dấu `` VD: `col2`
+$subQuery = $this->dbObject->subQuery();
+$subQuery->where('col1', '=', '`col2`')->get('subTable', 'col2');
+$this->dbObject->update('tableDb', ['col1' => $subQuery]);
+//UPDATE  tableDb SET col1 = (SELECT col2 FROM subTable WHERE col1 = `col2`)
+?>
+
+```
+
