@@ -73,6 +73,7 @@ class MysqliQuery
 	private $_join = [];
 	private $_addAndToJoin = [];
 	private $_union = [];
+	private $_insertValues = [];
 
 
 	/**
@@ -327,7 +328,7 @@ class MysqliQuery
 	 */
 	public function setQueryOption(string $queryOption = null)
 	{
-		$optionAllowed = ['ALL', 'DISTINCT', 'DISTINCTROW', 'HIGH_PRIORITY', 'STRAIGHT_JOIN', 'SQL_SMALL_RESULT', 'SQL_BIG_RESULT', 'SQL_BUFFER_RESULT', 'SQL_CACHE', 'SQL_NO_CACHE', 'SQL_CALC_FOUND_ROWS'];
+		$optionAllowed = ['ALL', 'DISTINCT', 'DISTINCTROW', 'HIGH_PRIORITY', 'STRAIGHT_JOIN', 'SQL_SMALL_RESULT', 'SQL_BIG_RESULT', 'SQL_BUFFER_RESULT', 'SQL_CACHE', 'SQL_NO_CACHE', 'SQL_CALC_FOUND_ROWS', 'LOW_PRIORITY', 'DELAYED', 'IGNORE'];
 		if (!in_array(strtoupper($queryOption), $optionAllowed)) {
 			throw new Exception("Query option doesn't match: ".implode(', ', $optionAllowed));	
 		}
@@ -384,26 +385,17 @@ class MysqliQuery
 	 */
 	public function get($tableName, $columns = null, $numberRows = null)
 	{
-		if (is_object($tableName)) {
-			$this->_tableName = $this->_buildSubQuery($tableName);
-		} else {
-			$this->_tableName = self::$_prefix.$tableName;
-		}
+		$this->_tableName = is_object($tableName) ? $this->_buildSubQuery($tableName) : self::$_prefix.$tableName;
+
+
 		if ($columns) {
-			if (is_array($columns)) {
-				$columns = implode(', ', $columns);
-			} else {
-				$columns = $columns;
-			}
+			$columns = is_array($columns) ? implode(', ', $columns) : rtrim($columns, ',');
 		} else {
 			$columns = $this->_fields;
 		}
+
 		if ($numberRows) {
-			if (is_array($numberRows)) {
-				$this->_limit = $numberRows;
-			} else {
-				$this->_limit = [$numberRows];
-			}
+			$this->_limit = is_array($numberRows) ? $numberRows : [$numberRows];
 		}
 		$this->_query = 'SELECT'.($this->_queryOption ? ' '.$this->_queryOption : '').' '.$columns.' FROM '.$this->_tableName;
 		$this->_buildQuery();
@@ -446,6 +438,36 @@ class MysqliQuery
 	public static function subQuery(string $_subQueryAlias = null)
 	{
 		return new self(array('_subQueryAlias' => $_subQueryAlias, '_isSubQuery' => true));
+	}
+
+	public function insertValues(array $values)
+	{
+		$this->_insertValues[] = $values;
+		return $this;
+	}
+
+	public function insert($tableName, $columns = null, $values = null)
+	{
+		$this->_tableName = is_object($tableNamee) ? $this->_buildSubQuery($tableName) : self::$_prefix.$tableName;
+
+		if ($columns) {
+			$columns = is_array($columns) ? '('.implode(', ', $columns).')' : rtrim($columns, ',');
+		} else {
+			$columns = '('.$this->_fields.')';
+		}
+
+		$newData = null;
+		if ($values) {
+			$newData = is_object($values) ? $this->_buildsubQueryInsert($values) : $this->_buildValues($values);
+		} else {
+			$newData = $this->_buildValues($this->_insertValues);
+		}
+		
+		$this->_query = 'INSERT '.($this->_queryOption ? $this->_queryOption : '').' INTO '.$this->_tableName.$columns.' '.(is_object($values) ? $newData : 'VALUES'.$newData);
+
+		$this->_buildQuery();
+		$this->reset();
+		return $this;
 	}
 
 	/**
@@ -509,6 +531,16 @@ class MysqliQuery
 		$subQuery = $value->getSubQuery();
 		return '('.$subQuery['query'].')'.($subQuery['alias'] ? ' AS '.$subQuery['alias'] : '');
 	}
+
+	private function _buildsubQueryInsert($value)
+	{
+		if (!is_object($value)) {
+			return $value;
+		}
+		$subQuery = $value->getSubQuery();
+		return $subQuery['query'].($subQuery['alias'] ? ' AS '.$subQuery['alias'] : '');
+	}
+
 	/**
 	 * Xây dựng mệnh đề group by
 	 * @return none
@@ -586,7 +618,7 @@ class MysqliQuery
 		}
 		foreach ($this->_join as $key => $value) {
 			list($joinTable, $joinOperator, $joinType) = $value;
-			$this->_query .= ' '.$joinType.' JOIN '.$joinTable.(count($joinOperator) !== 0 ? ' ON ' : ' ').$joinOperator;
+			$this->_query .= ' '.$joinType.' JOIN '.$joinTable.($joinOperator ? ' ON ' : ' ').$joinOperator;
 		}
 		if (!empty($this->_addAndToJoin)) {
 			foreach ($this->_addAndToJoin as $key => $value) {
@@ -650,17 +682,25 @@ class MysqliQuery
 	{
 		$data = null;
 		if (is_array($values)) {
+			if (is_array($values[0])) $isArray = true;
+			if (!$isArray) $data .= '(';
 			foreach ($values as $val) {
-				$data .= (is_numeric($val) ? $val : "'".$val."'").',';
+				if (is_array($val)) {
+					$data .= call_user_func(array($this, __FUNCTION__), $val).',';
+				} else {
+					$data .= (is_numeric($val) ? $val : "'".$val."'").',';
+				}
 			}
+			$data = rtrim($data, ',');
+			if (!$isArray) $data .= '),';
 		} else {
 			if (strpos($values, ',')) {
 				$newArray = explode(',', rtrim($values, ','));
 				return call_user_func(array($this, __FUNCTION__), $newArray);
 			}
-			$data = "'".$values."'";
+			$data = "('".$values."')";
 		}
-		$data = '('.rtrim($data, ',').')';
+		$data = rtrim($data, ',');
 		return $data;
 	}
 
@@ -708,6 +748,7 @@ class MysqliQuery
 		$this->_tableName = '';
 		$this->_fields = '*';
 		$this->_query = '';
+		$this->_insertValues = [];
 		return $this;
 	}
 

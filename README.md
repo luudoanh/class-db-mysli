@@ -158,3 +158,23 @@ $dbObject->get('tableDb', ['col1', 'col2'], 10);
 // SELECT SQL_NO_CACHE col1, col2 FROM tableDb LIMIT 10
 ?>
 ```
+
+### Insert
+```php
+<?php
+// Simple insert
+$this->dbObject->setQueryOption('DELAYED')->setFields(['firstName', 'lastName', 'email', 'website'])->insertValues(['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'])->insert('tableDb');
+// INSERT DELAYED INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh')
+
+// Multi insert
+$this->dbObject->insert('tableDb',['firstName', 'lastName', 'email', 'website'], [['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'], ['tran', 'tuan', 'trantuan12@gmail.com', 'https://trantuan.com']]);
+// INSERT  INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh'),('tran','tuan','trantuan12@gmail.com','https://trantuan.com')
+
+// Insert with subquery values
+$subQuery = $this->dbObject->subQuery();
+$subQuery->get('subTable', ['firstName', 'lastName'], 10);
+$this->dbObject->insert('tableDb', ['firstName', 'lastName'], $subQuery);
+// INSERT  INTO tableDb(firstName, lastName) SELECT firstName, lastName FROM subTable LIMIT 10
+
+
+?>

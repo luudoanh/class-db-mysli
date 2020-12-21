@@ -10,7 +10,7 @@ class MysqliQueryTest extends TestCase
 
 	public function setUp()
 	{
-		$this->dbObject = new MysqliQuery();
+		$this->dbObject = new MysqliQuery('localhost', 'manga', 'matkhau', 'manga');
 	}
 	public function testQueryBuilder()
 	{	
@@ -92,6 +92,20 @@ class MysqliQueryTest extends TestCase
 		$this->assertEquals('SQL_NO_CACHE', $this->dbObject->getLastQueryOption());
 		$this->assertEquals('SELECT SQL_NO_CACHE col1, col2 FROM tableDb LIMIT 10', $this->dbObject->getLastQuery());
 
+		// Test insert
+		$this->dbObject->insert('tableDb',['firstName', 'lastName', 'email', 'website'], [['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'], ['tran', 'tuan', 'trantuan12@gmail.com', 'https://trantuan.com']]);
+		$this->assertEquals("INSERT  INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh'),('tran','tuan','trantuan12@gmail.com','https://trantuan.com')", $this->dbObject->getLastQuery());
+
+		$this->dbObject->setQueryOption('DELAYED')->setFields(['firstName', 'lastName', 'email', 'website'])->insertValues(['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'])->insert('tableDb');
+		$this->assertEquals("INSERT DELAYED INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh')", $this->dbObject->getLastQuery());
+
+		$this->dbObject->setFields(['firstName', 'lastName', 'email', 'website'])->insertValues([['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'], ['tran', 'tuan','trantuan12@gmail.com','https://trantuan.com']])->insert('tableDb');
+		$this->assertEquals("INSERT  INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh'),('tran','tuan','trantuan12@gmail.com','https://trantuan.com')", $this->dbObject->getLastQuery());
+
+		$subQuery = $this->dbObject->subQuery();
+		$subQuery->get('subTable', ['firstName', 'lastName'], 10);
+		$this->dbObject->insert('tableDb', ['firstName', 'lastName'], $subQuery);
+		$this->assertEquals("INSERT  INTO tableDb(firstName, lastName) SELECT firstName, lastName FROM subTable LIMIT 10", $this->dbObject->getLastQuery());
 	}
 }
 
