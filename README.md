@@ -186,6 +186,14 @@ $this->dbObject->insert('tableDb', ['firstName', 'lastName'], $subQuery);
 ?>
 ```
 
+### Replace
+```php
+<?php
+$this->dbObject->insert('tableDb',['firstName', 'lastName', 'email', 'website'], ['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'], 'replace');
+// REPLACE  INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh')
+?>
+```
+
 ### Delete
 ```php
 <?php

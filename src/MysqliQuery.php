@@ -457,8 +457,9 @@ class MysqliQuery
 	 * @param  [array] $values mảng các trường dữ liệu bạn muốn insert.
 	 * @return [object] Mysqli object
 	 */
-	public function insert($tableName, $columns = null, $values = null)
+	public function insert($tableName, $columns = null, $values = null, $type = 'insert')
 	{
+		$type = strtoupper($type);
 		$this->_tableName = is_object($tableName) ? $this->_buildSubQuery($tableName) : self::$_prefix.$tableName;
 
 		if ($columns) {
@@ -474,13 +475,12 @@ class MysqliQuery
 			$newData = $this->_buildValues($this->_insertValues);
 		}
 
-		$this->_query = 'INSERT '.($this->_queryOption ? $this->_queryOption : '').' INTO '.$this->_tableName.$columns.' '.(is_object($values) ? $newData : 'VALUES'.$newData);
+		$this->_query = $type.' '.($this->_queryOption ? $this->_queryOption : '').' INTO '.$this->_tableName.$columns.' '.(is_object($values) ? $newData : 'VALUES'.$newData);
 
 		$this->_buildQuery();
 		$this->reset();
 		return $this;
 	}
-
 
 	/**
 	 * @param  $tableName Tên bảng

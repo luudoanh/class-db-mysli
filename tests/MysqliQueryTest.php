@@ -111,6 +111,10 @@ class MysqliQueryTest extends TestCase
 		$this->dbObject->insert('tableDb', ['firstName', 'lastName'], $subQuery);
 		$this->assertEquals("INSERT  INTO tableDb(firstName, lastName) SELECT firstName, lastName FROM subTable LIMIT 10", $this->dbObject->getLastQuery());
 
+		// Test replace
+		$this->dbObject->insert('tableDb',['firstName', 'lastName', 'email', 'website'], ['luu', 'doanh', 'luudoanh26@gmail.com', 'https://github.com/luudoanh'], 'replace');
+		$this->assertEquals("REPLACE  INTO tableDb(firstName, lastName, email, website) VALUES('luu','doanh','luudoanh26@gmail.com','https://github.com/luudoanh')", $this->dbObject->getLastQuery());
+		
 		// Test delete
 		$this->dbObject->where('id', '>', 10)->delete('tableDb');
 		$this->assertEquals("DELETE  FROM tableDb WHERE id > 10", $this->dbObject->getLastQuery());
