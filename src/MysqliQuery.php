@@ -12,29 +12,12 @@ namespace App\Mysql;
 
 class MysqliQuery
 {
-	/**
-	 * 	Static instance
-	 * @var Object Db
-	 */
-	protected static $_instance;
-
-	/**
-	 * 	Variable connection
-	 * @var Object mysqli
-	 */
-	protected $_connection;
 
 	/**
 	 * 	Table prefix
 	 * @var string
 	 */
 	protected static $_prefix;
-
-	/**
-	 * 	Setting for debug
-	 * @var boolean
-	 */
-	private $_showError = true;
 
 	/**
 	 * Sql query statement
@@ -85,7 +68,7 @@ class MysqliQuery
 	/**
 	 * Connect to server sql
 	 */
-	public function __construct($host = null, $db_name = null, $password = null, $db_user = null, $port = null, $charset = 'utf8', $prefix = null)
+	public function __construct($host = null, $prefix = null)
 	{
 		$_isSubQuery = false;
 		if (is_array($host)) {
@@ -99,54 +82,9 @@ class MysqliQuery
 			return false;
 		}
 
-		$this->addConnection($host, $db_name, $password, $db_user, $port, $charset);
 		if (isset($prefix)) {
 			$this->setPrefix($prefix);
 		}
-
-		self::$_instance = $this;
-	}
-
-	/**
-	 * Trả về một đối tượng tĩnh được khởi tạo từ Mysqli connection
-	 * @user $db = Db::getInstance();
-	 * @return Object Mysqli
-	 */
-	public static function getInstance()
-	{
-		return self::$_instance;
-	}
-
-	/**
-	 * Khởi tạo một kết nối đến database
-	 * @param [ip|localhost] $host     ip host sevrer
-	 * @param string $db_name  database name server
-	 * @param password $password user password
-	 * @param string $db_user  user name
-	 * @param int $port     server database port
-	 * @param string $charset  set chatrset
-	 * @return Mysqli object
-	 */
-	public function addConnection($host, $db_name, $password, $db_user, $port = null, $charset)
-	{
-		$mysqli = false;
-		if (!is_object($this->_connection)) {
-			$mysqli = new \Mysqli($host, $db_name, $password, $db_user, $port);
-			if ($mysqli->connect_errno) {
-				if ($this->_showError == true) {
-					throw new Exception("Failed to connect to Mysql: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error);
-				} else {
-					throw new Exception("Failed to connect to Mysql");
-				}
-			}
-			if (!empty($charset)) {
-				$mysqli->set_charset($charset);
-			}
-			$this->_connection = $mysqli;
-		} else {
-			$mysqli = $this->_connection;
-		}
-		return $mysqli;
 	}
 
 	/**
@@ -506,18 +444,18 @@ class MysqliQuery
 		$tmpTable = $tmpValues = null;
 		switch (gettype($tableName)) {
 			case 'array':
-				foreach ($tableName as $key => $value) {
-					$tmpTable .= self::$_prefix.$value.',';
-					unset($tableName[$key]);
-				}
-				$this->_tableName = rtrim($tmpTable, ',');
-				break;
+			foreach ($tableName as $key => $value) {
+				$tmpTable .= self::$_prefix.$value.',';
+				unset($tableName[$key]);
+			}
+			$this->_tableName = rtrim($tmpTable, ',');
+			break;
 			case 'object':
-				$this->_tableName = $this->_buildSubQuery($tableName);
-				break;
+			$this->_tableName = $this->_buildSubQuery($tableName);
+			break;
 			case 'string':
-				$this->_tableName = self::$_prefix.$tableName;
-				break;
+			$this->_tableName = self::$_prefix.$tableName;
+			break;
 		}
 		foreach ($parameters as $column => $expression) {
 			$tmpValues .= is_object($expression) ? $column.' = '.$this->_buildSubQuery($expression) : $column.' = '.$expression.',';
@@ -527,6 +465,14 @@ class MysqliQuery
 		$this->_buildQuery();
 		$this->reset();
 		return $this;
+	}
+
+	public function rawQuery($query)
+	{
+		$this->_query = $query;
+		$this->lastQuery = $this->_query;
+		$this->reset();
+		return $this->getLastQuery();
 	}
 
 	/**
@@ -814,6 +760,7 @@ class MysqliQuery
 		$this->_insertValues = [];
 		return $this;
 	}
+
 
 	/** Lấy ra câu truy vấn cuối cùng */
 	public function getLastQuery()

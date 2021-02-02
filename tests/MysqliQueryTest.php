@@ -10,7 +10,7 @@ class MysqliQueryTest extends TestCase
 
 	public function setUp()
 	{
-		$this->dbObject = new MysqliQuery('localhost', 'test', '', '');
+		$this->dbObject = new MysqliQuery();
 	}
 	public function testQueryBuilder()
 	{	
