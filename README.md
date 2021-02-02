@@ -2,11 +2,11 @@
 Đây là một class mà được mình viết dựa trên nguồn này [https://github.com/ThingEngineer/PHP-MySQLi-Database-Class](https://github.com/ThingEngineer/PHP-MySQLi-Database-Class). Và chỉ làm mục đích học tập của mình
 # Installation
 ### Installation nomal
-Các bạn có thể include trực tiếp file MysqliQuery.php vào project của mình
+Các bạn có thể include trực tiếp file MysqlConnection.php vào project của mình
 
 ```php
 <?php
-include_once 'MysqliQuery.php';
+include_once 'MysqlConnection.php';
 ?>
 ```
 ### Installation with composer
@@ -19,14 +19,14 @@ Khởi tạo class cơ bản bằng cách
 ```php
 <?php
 use App\Mysql;
-$dbObject = new MysqliQuery('hostname', 'dbUser', 'password', 'dbName');
+$dbObject = new MysqlConnection('hostname', 'dbUser', 'password', 'dbName');
 ?>
 ```
 Khởi tạo class với tất cả các tham số
 ```php
 <?php
 use App\Mysql;
-$dbObject = new MysqliQuery('hostname', 'dbUser', 'password', 'dbName', 'port', 'charset', 'prefix');
+$dbObject = new MysqlConnection('hostname', 'dbUser', 'password', 'dbName', 'port', 'charset', 'prefix');
 ?>
 ```
 3 tham số port. charset và prefix là không bắt buộc nếu bạn không truyền vào thì giá trị mặc định của chúng lần lượt là 3306, utf8, null
@@ -35,7 +35,7 @@ $dbObject = new MysqliQuery('hostname', 'dbUser', 'password', 'dbName', 'port', 
 ```php
 <?php
 use App\Mysql;
-$dbObject = new MysqliQuery('hostname', 'dbUser', 'password', 'dbName', 'port', 'charset', 'prefix');
+$dbObject = new MysqlConnection('hostname', 'dbUser', 'password', 'dbName', 'port', 'charset', 'prefix');
 $dbObject->get('tableDb');
 // SELECT * FROM tableDb
 
